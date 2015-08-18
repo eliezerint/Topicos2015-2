@@ -162,6 +162,7 @@ public class TelaJogo extends TelaBase {
             float x = MathUtils.random(0,camera.viewportWidth - meteoro.getWidth());
             float y = MathUtils.random(camera.viewportHeight, camera.viewportHeight * 2);
             meteoro.setPosition(x , y);
+            meteoros1.add(meteoro);
             palco.addActor(meteoro);
         }else {
             // não cria meteoro
