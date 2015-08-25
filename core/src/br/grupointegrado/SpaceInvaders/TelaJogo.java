@@ -10,6 +10,7 @@ import com.badlogic.gdx.graphics.g2d.BitmapFont;
 import com.badlogic.gdx.graphics.g2d.Sprite;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.math.MathUtils;
+import com.badlogic.gdx.math.Rectangle;
 import com.badlogic.gdx.scenes.scene2d.Stage;
 import com.badlogic.gdx.scenes.scene2d.ui.Image;
 import com.badlogic.gdx.scenes.scene2d.ui.Label;
@@ -17,6 +18,7 @@ import com.badlogic.gdx.scenes.scene2d.utils.SpriteDrawable;
 import com.badlogic.gdx.utils.Array;
 import com.badlogic.gdx.utils.viewport.FillViewport;
 
+import java.util.ArrayList;
 
 
 /**
@@ -30,6 +32,7 @@ public class TelaJogo extends TelaBase {
     private Stage palco;
     private BitmapFont fonte;
     private Label lbPontuacao;
+    private Label lbGameOver;
     private Image jogador;
     private Texture texturaJogador;
     private Texture texturaJogadorDireta;
@@ -49,9 +52,10 @@ public class TelaJogo extends TelaBase {
 
 
     /**
-     * Contrutor padrão da tela de jogo
+     * Contrutor padrï¿½o da tela de jogo
 
-     * @param game Referência para classe principal
+
+     * @param game Referï¿½ncia para classe principal
      */
     public TelaJogo (MainGame game){
         super(game);
@@ -59,7 +63,7 @@ public class TelaJogo extends TelaBase {
     }
 
     /**
-     * chamada quando a tela é exibida
+     * chamada quando a tela ï¿½ exibida
      */
 
     @Override
@@ -113,6 +117,10 @@ public class TelaJogo extends TelaBase {
         lbPontuacao = new Label("0 pontos", lbEstilo);
         palco.addActor(lbPontuacao);
 
+        lbGameOver = new Label("Game Over!", lbEstilo);
+        palco.addActor(lbGameOver);
+
+
 
     }
 
@@ -126,22 +134,32 @@ public class TelaJogo extends TelaBase {
 
 
     /**
-     * Chamado a todo quadro de atualização de Jogo (FPS)
+     * Chamado a todo quadro de atualizaï¿½ï¿½o de Jogo (FPS)
      * @param delta Tempo entre um quadro e outro (em segundo)
      */
 
     @Override
     public void render(float delta) {
-        Gdx.gl.glClearColor(.15f,.15f,.25f, 1);
+        Gdx.gl.glClearColor(.15f, .15f,.25f, 1);
         Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
 
         lbPontuacao.setPosition(10, camera.viewportHeight - 20);
-        captureTeclas();
-        atualizarJogador(delta);
-        atualizarTiro(delta);
-        atualizarMeteoros(delta);
+        lbPontuacao.setText(pontuacao + " Pontos");
 
-        // Atualiza a situação do palco
+
+        lbGameOver.setPosition(camera.viewportWidth / 2 - lbGameOver.getHeight() / 2, camera.viewportHeight / 2);
+        lbGameOver.setVisible(gameOver == true);
+
+        if (gameOver == false){
+            captureTeclas();
+            atualizarJogador(delta);
+            atualizarTiro(delta);
+            atualizarMeteoros(delta);
+            detectarcolisoes(meteoros1, 5);
+            detectarcolisoes(meteoros2, 15);
+        }
+
+        // Atualiza a situaÃ§Ã£o do palco
         palco.act(delta);
         // Desenha o palco na tela
         palco.draw();
@@ -150,36 +168,104 @@ public class TelaJogo extends TelaBase {
 
 
     }
+    private Rectangle recJogador = new Rectangle();
+    private Rectangle recTiro = new Rectangle();
+    private Rectangle recMeteoro = new Rectangle();
+
+    private int pontuacao = 0;
+    private  boolean gameOver = false;
+
+    private void detectarcolisoes(Array<Image> meteoros, int valePontos) {
+        recJogador.set(jogador.getX(), jogador.getY(),jogador.getWidth(), jogador.getHeight());
+
+        for (Image meteoro : meteoros){
+            recMeteoro.set(meteoro.getX(), meteoro.getY(),meteoro.getWidth(), meteoro.getHeight());
+           for (Image tiro : tiros){
+            recTiro.set(tiro.getX(), tiro.getY(), tiro.getWidth(), tiro.getHeight());
+            if (recMeteoro.overlaps(recTiro)){
+                //aqui ocorre uma colisÃ£o do tiro com o meteoro 1
+                pontuacao += valePontos;
+                tiro.remove();//remove do palco
+                tiros.removeValue( tiro, true);//remove da lista
+                meteoro.remove();//remove do palco
+                meteoros.removeValue(meteoro , true); //remove da lista
+
+
+            }
+
+          }
+            //detectar colisÃµes com o player
+            if (recJogador.overlaps(recMeteoro)){
+             //colisÃ£o com o jogador;
+                gameOver = true;
+            }
+        }
+
+    }
+
+
 
 
 
     private void atualizarMeteoros(float delta) {
-        int tipo = MathUtils.random(1, 3);
+        int qtdMeteoro = meteoros1.size  + meteoros2.size; //retorna a quantidade de meteoro criados
 
-        if (tipo == 1){
-            //cria meteoro
-            Image meteoro = new Image(texturaMeteoro1);
-            float x = MathUtils.random(0,camera.viewportWidth - meteoro.getWidth());
-            float y = MathUtils.random(camera.viewportHeight, camera.viewportHeight * 2);
-            meteoro.setPosition(x , y);
-            meteoros1.add(meteoro);
-            palco.addActor(meteoro);
-        }else {
-            // não cria meteoro
+
+        if (qtdMeteoro < 10 ) {
+
+
+            int tipo = MathUtils.random(1, 4); //retorna 1 ou 2 aleatoriamente
+
+            if (tipo == 1) {
+                //cria meteoro 1
+                Image meteoro = new Image(texturaMeteoro1);
+                float x = MathUtils.random(0, camera.viewportWidth - meteoro.getWidth());
+                float y = MathUtils.random(camera.viewportHeight, camera.viewportHeight * 2);
+                meteoro.setPosition(x, y);
+                meteoros1.add(meteoro);
+                palco.addActor(meteoro);
+
+
+            } else {
+
+                //cria meteoro 2
+                Image meteoro = new Image(texturaMeteoro2);
+                float x = MathUtils.random(0, camera.viewportWidth - meteoro.getWidth());
+                float y = MathUtils.random(camera.viewportHeight, camera.viewportHeight * 2);
+                meteoro.setPosition(x, y);
+                meteoros2.add(meteoro);
+                palco.addActor(meteoro);
+
+
+            }
 
         }
-        float velocidade = 200;
+        float velocidade = 200; // velocidade de pixels por segundo
         for(Image meteoro :meteoros1){
             float x = meteoro.getX();
             float y = meteoro.getY() - velocidade * delta;
             meteoro.setPosition(x, y);
+          // remove tiro sair da tela
+            if (meteoro.getY() + meteoro.getHeight() < 0) {
+                meteoro.remove(); //remove do palco
+                meteoros1.removeValue(meteoro, true);
+            }
 
+        }
+        float velocidade1 = 250; // velocidade de pixels por segundo
+        for(Image meteoro :meteoros2) {
+            float x = meteoro.getX();
+            float y = meteoro.getY() - velocidade * delta;
+            meteoro.setPosition(x, y);
 
+            if (meteoro.getY() + meteoro.getHeight() < 0) { //atualiza posiÃ§ao do meteoro
+                meteoro.remove(); //remove do palco
+                meteoros2.removeValue(meteoro, true);
+            }
 
         }
 
-
-    }
+        }
 
     private final float MIN_INTERVALO_TIROS = 0.4f; // Minimo de tempo entre os tiros
     private float intervaloTiros = 0;// Tempo acumulados entre os tiros
@@ -187,11 +273,11 @@ public class TelaJogo extends TelaBase {
 
     private void atualizarTiro(float delta) {
         intervaloTiros = intervaloTiros + delta;// Acumula o tempo percorrido
-        if (atirando){
+        if (atirando) {
             // Verifica  se o tempo minimo foi atingido
-            if (intervaloTiros >= MIN_INTERVALO_TIROS){
+            if (intervaloTiros >= MIN_INTERVALO_TIROS) {
                 Image tiro = new Image(texturaTiro);
-                float x = jogador.getX() + jogador.getWidth() / 2- tiro.getWidth() / 2 ;
+                float x = jogador.getX() + jogador.getWidth() / 2 - tiro.getWidth() / 2;
                 float y = jogador.getY() + jogador.getHeight();
                 tiro.setPosition(x, y);
                 tiros.add(tiro);
@@ -199,15 +285,15 @@ public class TelaJogo extends TelaBase {
                 intervaloTiros = 0;
             }
         }
-        float velocidade = 200;// Velocidade do movimento do tiro
+        float velocidade = 200;// pixels por segundo
         // Percorre a todo as lista de tiro na tela
-        for (Image tiro : tiros){
-            //movimento o tiro em direção ao topo
+        for (Image tiro : tiros) {
+            //movimento o tiro em direÃ§Ã£o ao topo
             float x = tiro.getX();
-            float y = tiro.getY() + velocidade * delta ;
+            float y = tiro.getY() + velocidade * delta;
             tiro.setPosition(x, y);
             // remove os tiros que sairam da tela
-            if(tiro.getY()>camera.viewportHeight){
+            if (tiro.getY() > camera.viewportHeight) {
                 tiros.removeValue(tiro, true);//remove da lista
                 tiro.remove();//remove do palco
 
@@ -215,11 +301,24 @@ public class TelaJogo extends TelaBase {
 
 
         }
+        for (Image tiro : tiros) {
+            //movimento o tiro em direÃ§Ã£o ao topo
+            float x = tiro.getX();
+            float y = tiro.getY() + velocidade * delta;
+            tiro.setPosition(x, y);
+            // remove os tiros que sairam da tela
+            if (tiro.getY() > camera.viewportHeight) {
+                tiros.removeValue(tiro, true);//remove da lista
+                tiro.remove();//remove do palco
 
+            }
+
+
+        }
     }
 
     /**
-     * Atualiza a posição do jogador
+     * Atualiza a posiï¿½ï¿½o do jogador
      * @param delta
      */
     private void atualizarJogador(float delta) {
@@ -290,7 +389,7 @@ public class TelaJogo extends TelaBase {
     }
 
     /**
-     * É chamado sempre há uma alteração no tamanho da tela
+     * ï¿½ chamado sempre hï¿½ uma alteraï¿½ï¿½o no tamanho da tela
      * @param width Novo valor de largura da tela
      * @param height Novo valor de altura da tela
      */
@@ -302,7 +401,7 @@ public class TelaJogo extends TelaBase {
     }
 
     /**
-     * É chamado sempre que o jogo for minimizado
+     * ï¿½ chamado sempre que o jogo for minimizado
      */
     @Override
     public void pause() {
@@ -310,7 +409,7 @@ public class TelaJogo extends TelaBase {
     }
 
     /**
-     * É chamado sempre quando o jogo voltar para o primeiro plano
+     * ï¿½ chamado sempre quando o jogo voltar para o primeiro plano
      */
     @Override
     public void resume() {
@@ -318,7 +417,7 @@ public class TelaJogo extends TelaBase {
     }
 
     /**
-     * É chamado quando a tela for destruida
+     * ï¿½ chamado quando a tela for destruida
      */
     @Override
     public void dispose() {
