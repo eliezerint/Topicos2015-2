@@ -1,7 +1,9 @@
 package br.grupointegrado.SpaceInvaders;
 
+import com.badlogic.gdx.Application;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Input;
+import com.badlogic.gdx.Preferences;
 import com.badlogic.gdx.audio.Music;
 import com.badlogic.gdx.audio.Sound;
 import com.badlogic.gdx.graphics.Color;
@@ -13,6 +15,7 @@ import com.badlogic.gdx.graphics.g2d.Sprite;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.math.MathUtils;
 import com.badlogic.gdx.math.Rectangle;
+import com.badlogic.gdx.math.Vector3;
 import com.badlogic.gdx.scenes.scene2d.Stage;
 import com.badlogic.gdx.scenes.scene2d.ui.Image;
 import com.badlogic.gdx.scenes.scene2d.ui.Label;
@@ -22,6 +25,7 @@ import com.badlogic.gdx.utils.viewport.FillViewport;
 import com.badlogic.gdx.graphics.g2d.freetype.FreeTypeFontGenerator;
 
 import java.util.ArrayList;
+import java.util.Vector;
 
 
 /**
@@ -87,14 +91,12 @@ public class TelaJogo extends TelaBase {
         initJogador();
 
 
-
-
     }
 
     private void initSons() {
         somTiro = Gdx.audio.newSound(Gdx.files.internal("sounds/shoot.mp3"));
         somExplosao = Gdx.audio.newSound(Gdx.files.internal("sounds/explosion.mp3"));
-        somGameOver = Gdx.audio.newSound(Gdx.files.internal("sounds/gameOver.mp3"));
+        somGameOver = Gdx.audio.newSound(Gdx.files.internal("sounds/gameover.mp3"));
         musicaFundo = Gdx.audio.newMusic(Gdx.files.internal("sounds/background.mp3"));
         musicaFundo.setLooping(true);
     }
@@ -104,12 +106,13 @@ public class TelaJogo extends TelaBase {
         texturaTiro = new Texture("sprites/shot.png");
         texturaMeteoro1 = new Texture("sprites/enemie-1.png");
         texturaMeteoro2 = new Texture("sprites/enemie-2.png");
-        for(int i = 1; i <= 17; i++) {
-                   Texture text = new Texture("sprites/explosion-" + i + ".png");
-                      texturasExplosao.add(text);
+        for (int i = 1; i <= 17; i++) {
+            Texture text = new Texture("sprites/explosion-" + i + ".png");
+            texturasExplosao.add(text);
 
 
-    }}
+        }
+    }
 
 
     /**
@@ -156,16 +159,16 @@ public class TelaJogo extends TelaBase {
     private void initFonte() {
 
         FreeTypeFontGenerator generator = new FreeTypeFontGenerator(Gdx.files.internal("fonts/roboto.ttf"));
-                FreeTypeFontGenerator.FreeTypeFontParameter param = new FreeTypeFontGenerator.FreeTypeFontParameter();
-                param.color = Color.WHITE;
-                param.size = 24;
-                param.shadowOffsetX = 2;
-                param.shadowOffsetY = 2;
-                param.shadowColor = Color.BLACK;
+        FreeTypeFontGenerator.FreeTypeFontParameter param = new FreeTypeFontGenerator.FreeTypeFontParameter();
+        param.color = Color.WHITE;
+        param.size = 24;
+        param.shadowOffsetX = 2;
+        param.shadowOffsetY = 2;
+        param.shadowColor = Color.BLACK;
 
-                        //fonte = new BitmapFont();
-                               fonte = generator.generateFont(param);
-                generator.dispose();
+        //fonte = new BitmapFont();
+        fonte = generator.generateFont(param);
+        generator.dispose();
     }
 
 
@@ -199,10 +202,11 @@ public class TelaJogo extends TelaBase {
             atualizarMeteoros(delta);
             detectarcolisoes(meteoros1, 5);
             detectarcolisoes(meteoros2, 15);
-            }else {
-                if(musicaFundo.isPlaying())// se esta tocando
-                    musicaFundo.stop();// parar musica
-            }
+        } else {
+            if (musicaFundo.isPlaying())// se esta tocando
+                musicaFundo.stop();// parar musica
+            reiniciarJogo();
+        }
 
 
         // Atualiza a situação do palco
@@ -213,22 +217,35 @@ public class TelaJogo extends TelaBase {
 
         //Desenha o palco de informações na tela
         palcoInformacoes.act(delta);
-               palcoInformacoes.draw();
-
+        palcoInformacoes.draw();
 
 
     }
 
+    private void reiniciarJogo() {
+        if (Gdx.input.isKeyJustPressed(Input.Keys.ENTER)|| Gdx.input.isTouched()) {
+
+            Preferences preferencias = Gdx.app.getPreferences("SpaceInvaders");
+            int pontuacaoMaxima = preferencias.getInteger("pontuacao_maxima", 0);
+            // verifico se a minha pontuação é maior que a pontução maxima~
+            if (pontuacao > pontuacaoMaxima) {
+                preferencias.putInteger("pontuacao_maxima", pontuacao);
+                preferencias.flush();
+            }
+            game.setScreen(new TelaMenu(game));
+        }
+    }
+
     private void atualizarExplosoes(float delta) {
         for (Explosion explosao : explosoes) {
-                      //Verifica se a explosão chegou ao fim
-                                if (explosao.getEstagio() >= 16) {
-                                    explosoes.removeValue(explosao, true);
-                                explosao.getAtor().remove();
-                            } else {
-                                explosao.atualizar(delta);
-                            }
-                    }
+            //Verifica se a explosão chegou ao fim
+            if (explosao.getEstagio() >= 16) {
+                explosoes.removeValue(explosao, true);
+                explosao.getAtor().remove();
+            } else {
+                explosao.atualizar(delta);
+            }
+        }
     }
 
     private Rectangle recJogador = new Rectangle();
@@ -266,7 +283,6 @@ public class TelaJogo extends TelaBase {
                 somGameOver.play();
 
 
-
             }
         }
 
@@ -274,11 +290,11 @@ public class TelaJogo extends TelaBase {
 
     private void criarExplosao(float x, float y) {
         Image ator = new Image(texturasExplosao.get(0));
-                ator.setPosition(x - ator.getWidth() / 2 , y - ator.getHeight()/ 2);
-                palco.addActor(ator);
+        ator.setPosition(x - ator.getWidth() / 2, y - ator.getHeight() / 2);
+        palco.addActor(ator);
 
-                       Explosion explosao = new Explosion(texturasExplosao, ator);
-                explosoes.add(explosao);
+        Explosion explosao = new Explosion(texturasExplosao, ator);
+        explosoes.add(explosao);
         somExplosao.play();
     }
 
@@ -325,6 +341,7 @@ public class TelaJogo extends TelaBase {
             if (meteoro.getY() + meteoro.getHeight() < 0) {
                 meteoro.remove(); //remove do palco
                 meteoros1.removeValue(meteoro, true);
+                pontuacao = pontuacao - 30;
             }
 
         }
@@ -337,6 +354,7 @@ public class TelaJogo extends TelaBase {
             if (meteoro.getY() + meteoro.getHeight() < 0) { //atualiza posiçao do meteoro
                 meteoro.remove(); //remove do palco
                 meteoros2.removeValue(meteoro, true);
+                pontuacao = pontuacao - 60;
             }
 
         }
@@ -451,17 +469,57 @@ public class TelaJogo extends TelaBase {
         atirando = false;
 
 
-        if (Gdx.input.isKeyPressed(Input.Keys.LEFT)) {
+        if (Gdx.input.isKeyPressed(Input.Keys.LEFT) || clicouEsquerda()) {
             indoEsquerda = true;
         }
-        if (Gdx.input.isKeyPressed(Input.Keys.RIGHT)) {
+        if (Gdx.input.isKeyPressed(Input.Keys.RIGHT) || clicouDireita()) {
             indoDireta = true;
         }
-        if (Gdx.input.isKeyPressed(Input.Keys.SPACE)) {
+        if (Gdx.input.isKeyPressed(Input.Keys.SPACE) || Gdx.app.getType() == Application.ApplicationType.Android) {
             atirando = true;
         }
 
 
+    }
+
+    private boolean clicouDireita() {
+        if (Gdx.input.isTouched()) {
+            Vector3 posicao = new Vector3();
+            //captura o toque na janela no windows
+            posicao.x = Gdx.input.getX();
+            posicao.y = Gdx.input.getY();
+
+            //converter para uma coodernada do jogo
+            posicao = camera.unproject(posicao);
+            float meio = camera.viewportWidth / 2;
+
+            if (posicao.x > meio) {
+                return true;
+
+            }
+        }
+
+        return false;
+    }
+
+    private boolean clicouEsquerda() {
+        if (Gdx.input.isTouched()) {
+            Vector3 posicao = new Vector3();
+            //captura o toque na janela no windows
+            posicao.x = Gdx.input.getX();
+            posicao.y = Gdx.input.getY();
+
+            //converter para uma coodernada do jogo
+            posicao = camera.unproject(posicao);
+            float meio = camera.viewportWidth / 2;
+
+            if (posicao.x < meio) {
+                return true;
+
+            }
+        }
+
+        return false;
     }
 
     /**
@@ -513,10 +571,7 @@ public class TelaJogo extends TelaBase {
         texturaMeteoro2.dispose();
 
 
-
-
-
-        for(Texture text: texturasExplosao) {
+        for (Texture text : texturasExplosao) {
             text.dispose();
         }
 
